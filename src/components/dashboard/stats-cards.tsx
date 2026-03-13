@@ -26,8 +26,8 @@ export function StatsCards({ stats }: { stats: DashboardStats }) {
           <CardContent className="space-y-1">
             <p className="text-2xl font-bold text-slate-900">${fmtUsd(stats.totalAmountDay)}</p>
             <p className="text-sm text-slate-500">comprado</p>
-            <p className="text-emerald-600 font-semibold text-lg">Bs. {fmt(stats.totalProfitDay)}</p>
-            <p className="text-xs text-slate-400">ganancia estimada</p>
+            <p className="text-emerald-600 font-semibold text-lg">${fmt(stats.totalProfitDay)}</p>
+            <p className="text-xs text-slate-400">ganancia neta (USD, c/3% com.)</p>
           </CardContent>
         </Card>
 
@@ -42,8 +42,8 @@ export function StatsCards({ stats }: { stats: DashboardStats }) {
           <CardContent className="space-y-1">
             <p className="text-2xl font-bold text-slate-900">${fmtUsd(stats.totalAmountWeek)}</p>
             <p className="text-sm text-slate-500">comprado</p>
-            <p className="text-emerald-600 font-semibold text-lg">Bs. {fmt(stats.totalProfitWeek)}</p>
-            <p className="text-xs text-slate-400">ganancia estimada</p>
+            <p className="text-emerald-600 font-semibold text-lg">${fmt(stats.totalProfitWeek)}</p>
+            <p className="text-xs text-slate-400">ganancia neta (USD, c/3% com.)</p>
           </CardContent>
         </Card>
 
@@ -58,8 +58,8 @@ export function StatsCards({ stats }: { stats: DashboardStats }) {
           <CardContent className="space-y-1">
             <p className="text-2xl font-bold text-slate-900">${fmtUsd(stats.totalAmountMonth)}</p>
             <p className="text-sm text-slate-500">comprado</p>
-            <p className="text-emerald-600 font-semibold text-lg">Bs. {fmt(stats.totalProfitMonth)}</p>
-            <p className="text-xs text-slate-400">ganancia estimada</p>
+            <p className="text-emerald-600 font-semibold text-lg">${fmt(stats.totalProfitMonth)}</p>
+            <p className="text-xs text-slate-400">ganancia neta (USD, c/3% com.)</p>
           </CardContent>
         </Card>
       </div>

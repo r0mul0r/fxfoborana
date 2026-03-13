@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -31,17 +31,25 @@ export function NewTransactionForm({ clients, defaultClientId }: Props) {
   const router = useRouter()
   const supabase = createClient()
 
-  const profit = amount && buyRate && marketRate
-    ? (parseFloat(marketRate) - parseFloat(buyRate)) * parseFloat(amount)
-    : null
+  // Cálculos en tiempo real
+  const hasValues = amount && buyRate && marketRate &&
+    parseFloat(amount) > 0 && parseFloat(buyRate) > 0 && parseFloat(marketRate) > 0
 
-  const totalPaid = amount && buyRate
+  const totalPaid = hasValues
     ? parseFloat(amount) * parseFloat(buyRate)
     : null
 
-  const totalMarket = amount && marketRate
+  const totalMarket = hasValues
     ? parseFloat(amount) * parseFloat(marketRate)
     : null
+
+  // Ganancia bruta en USD = diferencia de tasas × monto / tasa mercado
+  const profitGrossUsd = hasValues
+    ? ((parseFloat(marketRate) - parseFloat(buyRate)) * parseFloat(amount)) / parseFloat(marketRate)
+    : null
+
+  const commission = profitGrossUsd !== null ? profitGrossUsd * 0.03 : null
+  const profitNetUsd = profitGrossUsd !== null ? profitGrossUsd * 0.97 : null
 
   function handleClientChange(value: string | null) {
     setClientId(value ?? '')
@@ -181,26 +189,40 @@ export function NewTransactionForm({ clients, defaultClientId }: Props) {
           </div>
 
           {/* Preview */}
-          {profit !== null && (
+          {profitNetUsd !== null && (
             <>
               <Separator />
-              <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+              <div className="bg-slate-50 rounded-lg p-4 space-y-3">
                 <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-emerald-500" />
                   Resumen de la operación
                 </p>
-                <div className="grid grid-cols-3 gap-3 text-center text-sm">
-                  <div>
-                    <p className="text-slate-400 text-xs">Pagas</p>
-                    <p className="font-semibold text-slate-800">Bs. {fmt(totalPaid!)}</p>
+
+                {/* Fila 1: movimiento en moneda local */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="bg-white rounded-md px-3 py-2">
+                    <p className="text-slate-400 text-xs mb-0.5">Pagas (moneda local)</p>
+                    <p className="font-semibold text-slate-800">{fmt(totalPaid!)}</p>
                   </div>
-                  <div>
-                    <p className="text-slate-400 text-xs">Valor mercado</p>
-                    <p className="font-semibold text-slate-800">Bs. {fmt(totalMarket!)}</p>
+                  <div className="bg-white rounded-md px-3 py-2">
+                    <p className="text-slate-400 text-xs mb-0.5">Valor a tasa mercado</p>
+                    <p className="font-semibold text-slate-800">{fmt(totalMarket!)}</p>
                   </div>
-                  <div>
-                    <p className="text-slate-400 text-xs">Ganancia</p>
-                    <p className="font-bold text-emerald-600 text-base">Bs. {fmt(profit)}</p>
+                </div>
+
+                {/* Fila 2: ganancia en USD */}
+                <div className="grid grid-cols-3 gap-3 text-sm">
+                  <div className="bg-white rounded-md px-3 py-2">
+                    <p className="text-slate-400 text-xs mb-0.5">Ganancia bruta</p>
+                    <p className="font-semibold text-slate-700">${fmt(profitGrossUsd!)}</p>
+                  </div>
+                  <div className="bg-white rounded-md px-3 py-2">
+                    <p className="text-slate-400 text-xs mb-0.5">Comisión (3%)</p>
+                    <p className="font-semibold text-red-400">-${fmt(commission!)}</p>
+                  </div>
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
+                    <p className="text-emerald-600 text-xs mb-0.5 font-medium">Ganancia neta</p>
+                    <p className="font-bold text-emerald-700 text-base">${fmt(profitNetUsd!)}</p>
                   </div>
                 </div>
               </div>

@@ -65,7 +65,7 @@ export default async function TransactionsPage() {
                   <th className="text-right px-4 py-3 text-slate-500 font-medium">Monto</th>
                   <th className="text-right px-4 py-3 text-slate-500 font-medium">T. Compra</th>
                   <th className="text-right px-4 py-3 text-slate-500 font-medium">T. Mercado</th>
-                  <th className="text-right px-4 py-3 text-slate-500 font-medium">Ganancia</th>
+                  <th className="text-right px-4 py-3 text-slate-500 font-medium">Ganancia (USD)</th>
                   <th className="text-center px-4 py-3 text-slate-500 font-medium">Estado</th>
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -90,7 +90,7 @@ export default async function TransactionsPage() {
                     <td className="px-4 py-3 text-right text-slate-600">{fmt(tx.buy_rate)}</td>
                     <td className="px-4 py-3 text-right text-slate-600">{fmt(tx.market_rate)}</td>
                     <td className="px-4 py-3 text-right font-semibold text-emerald-600">
-                      Bs. {fmt(tx.profit ?? 0)}
+                      ${fmt(tx.profit ?? 0)}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <Badge

@@ -21,7 +21,11 @@ create table public.transactions (
   amount numeric(12, 2) not null check (amount > 0),
   buy_rate numeric(10, 4) not null check (buy_rate > 0),
   market_rate numeric(10, 4) not null check (market_rate > 0),
-  profit numeric(12, 2) generated always as ((market_rate - buy_rate) * amount) stored,
+  -- Ganancia neta en USD = ((tasa_mercado - tasa_compra) * monto / tasa_mercado) * 0.97
+  -- Convierte la ganancia en moneda local a USD usando la tasa de mercado, luego resta 3% de comisión
+  profit numeric(12, 6) generated always as (
+    ((market_rate - buy_rate) * amount / market_rate) * 0.97
+  ) stored,
   status text not null default 'pending' check (status in ('pending', 'delivered')),
   notes text,
   created_at timestamptz default now() not null,

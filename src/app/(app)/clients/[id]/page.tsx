@@ -109,7 +109,8 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               <TrendingUp className="h-4 w-4 text-emerald-400" />
               <p className="text-xs text-slate-500">Ganancia generada</p>
             </div>
-            <p className="text-xl font-bold text-emerald-600">Bs. {fmt(totalProfit)}</p>
+            <p className="text-xl font-bold text-emerald-600">${fmt(totalProfit)}</p>
+            <p className="text-xs text-slate-400 mt-0.5">USD neto (c/3% com.)</p>
           </CardContent>
         </Card>
         <Card className={pendingAmount > 0 ? 'bg-amber-50 border-amber-200' : ''}>
@@ -159,7 +160,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                         <span>Compra: {fmt(tx.buy_rate)} / Mercado: {fmt(tx.market_rate)}</span>
                         <span>·</span>
                         <span className="text-emerald-600 font-medium">
-                          Ganancia: Bs. {fmt(tx.profit ?? 0)}
+                          Ganancia: ${fmt(tx.profit ?? 0)} USD
                         </span>
                       </div>
                       <p className="text-xs text-slate-400 mt-0.5">
