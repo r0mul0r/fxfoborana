@@ -1,22 +1,17 @@
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { NewClientForm } from '@/components/clients/new-client-form'
 
 export default function NewClientPage() {
   return (
-    <div className="max-w-lg space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/clients">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Volver
-          </Link>
-        </Button>
-      </div>
+    <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Nuevo cliente</h1>
-        <p className="text-slate-500 text-sm mt-1">Registra un nuevo cliente vendedor de divisas</p>
+        <Link href="/clients" className="inline-flex items-center gap-1 text-sm text-slate-500 active:text-slate-800">
+          <ArrowLeft className="h-4 w-4" />
+          Clientes
+        </Link>
+        <h1 className="text-xl font-bold text-slate-900 mt-3">Nuevo cliente</h1>
+        <p className="text-sm text-slate-400">Registra un cliente que te vende divisas</p>
       </div>
       <NewClientForm />
     </div>

@@ -3,14 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
-import { Loader2, TrendingUp } from 'lucide-react'
+import { Loader2, TrendingUp, ChevronDown } from 'lucide-react'
 
 interface Props {
   clients: { id: string; name: string }[]
@@ -21,6 +15,10 @@ function fmt(n: number) {
   return new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2 }).format(n)
 }
 
+const selectCls = "h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 appearance-none"
+const inputCls  = "h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+const labelCls  = "block text-sm font-medium text-slate-600 mb-1.5"
+
 export function NewTransactionForm({ clients, defaultClientId }: Props) {
   const [loading, setLoading] = useState(false)
   const [clientId, setClientId] = useState(defaultClientId ?? '')
@@ -28,60 +26,38 @@ export function NewTransactionForm({ clients, defaultClientId }: Props) {
   const [amount, setAmount] = useState('')
   const [buyRate, setBuyRate] = useState('')
   const [marketRate, setMarketRate] = useState('')
+  const [notes, setNotes] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
-  // Cálculos en tiempo real
-  const hasValues = amount && buyRate && marketRate &&
-    parseFloat(amount) > 0 && parseFloat(buyRate) > 0 && parseFloat(marketRate) > 0
+  const a = parseFloat(amount)
+  const b = parseFloat(buyRate)
+  const m = parseFloat(marketRate)
+  const hasValues = a > 0 && b > 0 && m > 0
 
-  const totalPaid = hasValues
-    ? parseFloat(amount) * parseFloat(buyRate)
-    : null
-
-  const totalMarket = hasValues
-    ? parseFloat(amount) * parseFloat(marketRate)
-    : null
-
-  // Ganancia bruta en USD = diferencia de tasas × monto / tasa mercado
-  const profitGrossUsd = hasValues
-    ? ((parseFloat(marketRate) - parseFloat(buyRate)) * parseFloat(amount)) / parseFloat(marketRate)
-    : null
-
-  const commission = profitGrossUsd !== null ? profitGrossUsd * 0.03 : null
-  const profitNetUsd = profitGrossUsd !== null ? profitGrossUsd * 0.97 : null
-
-  function handleClientChange(value: string | null) {
-    setClientId(value ?? '')
-  }
-
-  function handleCurrencyChange(value: string | null) {
-    setCurrency(value ?? 'USD')
-  }
+  const totalPaid       = hasValues ? a * b : null
+  const totalMarket     = hasValues ? a * m : null
+  const profitGrossUsd  = hasValues ? ((m - b) * a) / m : null
+  const commission      = profitGrossUsd !== null ? profitGrossUsd * 0.03 : null
+  const profitNetUsd    = profitGrossUsd !== null ? profitGrossUsd * 0.97 : null
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!clientId) {
-      toast.error('Selecciona un cliente')
-      return
-    }
+    if (!clientId) { toast.error('Selecciona un cliente'); return }
+    if (!hasValues) { toast.error('Completa todos los campos numéricos'); return }
 
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      router.push('/auth/login')
-      return
-    }
+    if (!user) { router.push('/auth/login'); return }
 
     const { error } = await supabase.from('transactions').insert({
       user_id: user.id,
       client_id: clientId,
       currency,
-      amount: parseFloat(amount),
-      buy_rate: parseFloat(buyRate),
-      market_rate: parseFloat(marketRate),
-      notes: (e.currentTarget.elements.namedItem('notes') as HTMLInputElement)?.value || null,
+      amount: a,
+      buy_rate: b,
+      market_rate: m,
+      notes: notes.trim() || null,
       status: 'pending',
     })
 
@@ -91,164 +67,156 @@ export function NewTransactionForm({ clients, defaultClientId }: Props) {
       return
     }
 
-    toast.success('Compra registrada correctamente')
+    toast.success('¡Compra registrada!')
     router.push('/transactions')
     router.refresh()
   }
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Client */}
-          <div className="space-y-2">
-            <Label>Cliente *</Label>
-            <Select value={clientId} onValueChange={handleClientChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona un cliente..." />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Cliente */}
+      <div>
+        <label className={labelCls}>Cliente *</label>
+        <div className="relative">
+          <select
+            value={clientId}
+            onChange={e => setClientId(e.target.value)}
+            className={selectCls}
+            required
+          >
+            <option value="">Selecciona un cliente...</option>
+            {clients.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        </div>
+      </div>
 
-          {/* Currency + Amount */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-2">
-              <Label>Moneda</Label>
-              <Select value={currency} onValueChange={handleCurrencyChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="EUR">EUR</SelectItem>
-                  <SelectItem value="COP">COP</SelectItem>
-                  <SelectItem value="BRL">BRL</SelectItem>
-                  <SelectItem value="PEN">PEN</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-2 space-y-2">
-              <Label htmlFor="amount">Monto *</Label>
-              <Input
-                id="amount"
-                name="amount"
-                type="number"
-                step="0.01"
-                min="0.01"
-                placeholder="50.00"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Rates */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="buy_rate">Tasa de compra *</Label>
-              <Input
-                id="buy_rate"
-                name="buy_rate"
-                type="number"
-                step="0.01"
-                min="0.01"
-                placeholder="550.00"
-                value={buyRate}
-                onChange={e => setBuyRate(e.target.value)}
-                required
-              />
-              <p className="text-xs text-slate-400">Lo que pagas por unidad</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="market_rate">Tasa de mercado *</Label>
-              <Input
-                id="market_rate"
-                name="market_rate"
-                type="number"
-                step="0.01"
-                min="0.01"
-                placeholder="600.00"
-                value={marketRate}
-                onChange={e => setMarketRate(e.target.value)}
-                required
-              />
-              <p className="text-xs text-slate-400">Tasa de venta / referencia</p>
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notas</Label>
-            <Input id="notes" name="notes" placeholder="Opcional..." />
-          </div>
-
-          {/* Preview */}
-          {profitNetUsd !== null && (
-            <>
-              <Separator />
-              <div className="bg-slate-50 rounded-lg p-4 space-y-3">
-                <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-emerald-500" />
-                  Resumen de la operación
-                </p>
-
-                {/* Fila 1: movimiento en moneda local */}
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-white rounded-md px-3 py-2">
-                    <p className="text-slate-400 text-xs mb-0.5">Pagas (moneda local)</p>
-                    <p className="font-semibold text-slate-800">{fmt(totalPaid!)}</p>
-                  </div>
-                  <div className="bg-white rounded-md px-3 py-2">
-                    <p className="text-slate-400 text-xs mb-0.5">Valor a tasa mercado</p>
-                    <p className="font-semibold text-slate-800">{fmt(totalMarket!)}</p>
-                  </div>
-                </div>
-
-                {/* Fila 2: ganancia en USD */}
-                <div className="grid grid-cols-3 gap-3 text-sm">
-                  <div className="bg-white rounded-md px-3 py-2">
-                    <p className="text-slate-400 text-xs mb-0.5">Ganancia bruta</p>
-                    <p className="font-semibold text-slate-700">${fmt(profitGrossUsd!)}</p>
-                  </div>
-                  <div className="bg-white rounded-md px-3 py-2">
-                    <p className="text-slate-400 text-xs mb-0.5">Comisión (3%)</p>
-                    <p className="font-semibold text-red-400">-${fmt(commission!)}</p>
-                  </div>
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
-                    <p className="text-emerald-600 text-xs mb-0.5 font-medium">Ganancia neta</p>
-                    <p className="font-bold text-emerald-700 text-base">${fmt(profitNetUsd!)}</p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          <div className="flex gap-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => router.back()}
+      {/* Moneda + Monto */}
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <label className={labelCls}>Moneda</label>
+          <div className="relative">
+            <select
+              value={currency}
+              onChange={e => setCurrency(e.target.value)}
+              className={selectCls}
             >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-              disabled={loading}
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Registrar compra
-            </Button>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="COP">COP</option>
+              <option value="BRL">BRL</option>
+              <option value="PEN">PEN</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           </div>
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+        <div className="col-span-2">
+          <label className={labelCls}>Monto *</label>
+          <input
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0.01"
+            placeholder="100.00"
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+            className={inputCls}
+            required
+          />
+        </div>
+      </div>
+
+      {/* Tasas */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={labelCls}>Tasa compra *</label>
+          <input
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0.01"
+            placeholder="550.00"
+            value={buyRate}
+            onChange={e => setBuyRate(e.target.value)}
+            className={inputCls}
+            required
+          />
+          <p className="text-xs text-slate-400 mt-1">Lo que pagas</p>
+        </div>
+        <div>
+          <label className={labelCls}>Tasa mercado *</label>
+          <input
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0.01"
+            placeholder="600.00"
+            value={marketRate}
+            onChange={e => setMarketRate(e.target.value)}
+            className={inputCls}
+            required
+          />
+          <p className="text-xs text-slate-400 mt-1">Tasa de referencia</p>
+        </div>
+      </div>
+
+      {/* Notas */}
+      <div>
+        <label className={labelCls}>Notas</label>
+        <input
+          type="text"
+          placeholder="Opcional..."
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          className={inputCls}
+        />
+      </div>
+
+      {/* Preview */}
+      {profitNetUsd !== null && (
+        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 space-y-3">
+          <p className="text-sm font-semibold text-emerald-800 flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Resumen de la operación
+          </p>
+
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="bg-white rounded-xl px-3 py-2">
+              <p className="text-slate-400 text-xs">Pagas</p>
+              <p className="font-semibold text-slate-800">{fmt(totalPaid!)}</p>
+            </div>
+            <div className="bg-white rounded-xl px-3 py-2">
+              <p className="text-slate-400 text-xs">Valor mercado</p>
+              <p className="font-semibold text-slate-800">{fmt(totalMarket!)}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 text-sm">
+            <div className="bg-white rounded-xl px-3 py-2">
+              <p className="text-slate-400 text-xs">Bruta</p>
+              <p className="font-semibold text-slate-700">${fmt(profitGrossUsd!)}</p>
+            </div>
+            <div className="bg-white rounded-xl px-3 py-2">
+              <p className="text-slate-400 text-xs">Com. 3%</p>
+              <p className="font-semibold text-red-400">-${fmt(commission!)}</p>
+            </div>
+            <div className="bg-emerald-600 rounded-xl px-3 py-2">
+              <p className="text-emerald-200 text-xs">Neta</p>
+              <p className="font-bold text-white">${fmt(profitNetUsd!)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full h-14 rounded-2xl bg-emerald-600 text-white font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Registrar compra'}
+      </button>
+    </form>
   )
 }

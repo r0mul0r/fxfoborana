@@ -3,12 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+
+const inputCls = "h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+const labelCls = "block text-sm font-medium text-slate-600 mb-1.5"
 
 export function NewClientForm() {
   const [loading, setLoading] = useState(false)
@@ -22,10 +21,7 @@ export function NewClientForm() {
     const formData = new FormData(e.currentTarget)
     const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) {
-      router.push('/auth/login')
-      return
-    }
+    if (!user) { router.push('/auth/login'); return }
 
     const { error } = await supabase.from('clients').insert({
       user_id: user.id,
@@ -41,51 +37,37 @@ export function NewClientForm() {
       return
     }
 
-    toast.success('Cliente registrado correctamente')
+    toast.success('Cliente registrado')
     router.push('/clients')
     router.refresh()
   }
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nombre *</Label>
-            <Input id="name" name="name" placeholder="Luis García" required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">Teléfono</Label>
-            <Input id="phone" name="phone" type="tel" placeholder="+58 412 000 0000" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Correo electrónico</Label>
-            <Input id="email" name="email" type="email" placeholder="luis@email.com" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notas</Label>
-            <Input id="notes" name="notes" placeholder="Notas opcionales..." />
-          </div>
-          <div className="flex gap-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => router.back()}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-              disabled={loading}
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Guardar cliente
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div>
+        <label className={labelCls}>Nombre *</label>
+        <input name="name" type="text" placeholder="Luis García" required className={inputCls} />
+      </div>
+      <div>
+        <label className={labelCls}>Teléfono</label>
+        <input name="phone" type="tel" placeholder="+58 412 000 0000" className={inputCls} />
+      </div>
+      <div>
+        <label className={labelCls}>Correo electrónico</label>
+        <input name="email" type="email" placeholder="luis@email.com" className={inputCls} />
+      </div>
+      <div>
+        <label className={labelCls}>Notas</label>
+        <input name="notes" type="text" placeholder="Opcional..." className={inputCls} />
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full h-14 rounded-2xl bg-emerald-600 text-white font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+      >
+        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Guardar cliente'}
+      </button>
+    </form>
   )
 }

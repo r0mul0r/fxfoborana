@@ -3,11 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+
+const inputCls = "h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-colors"
+const labelCls = "block text-sm font-medium text-slate-600 mb-1.5"
 
 export function RegisterForm() {
   const [loading, setLoading] = useState(false)
@@ -19,17 +19,19 @@ export function RegisterForm() {
     setLoading(true)
 
     const formData = new FormData(e.currentTarget)
-    const email = formData.get('email') as string
     const password = formData.get('password') as string
-    const confirmPassword = formData.get('confirm_password') as string
+    const confirm  = formData.get('confirm_password') as string
 
-    if (password !== confirmPassword) {
+    if (password !== confirm) {
       toast.error('Las contraseñas no coinciden')
       setLoading(false)
       return
     }
 
-    const { error } = await supabase.auth.signUp({ email, password })
+    const { error } = await supabase.auth.signUp({
+      email: formData.get('email') as string,
+      password,
+    })
 
     if (error) {
       toast.error(error.message)
@@ -37,52 +39,32 @@ export function RegisterForm() {
       return
     }
 
-    toast.success('Cuenta creada. Revisa tu correo para confirmar.')
+    toast.success('Cuenta creada. Revisa tu correo.')
     router.push('/dashboard')
     router.refresh()
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="email">Correo electrónico</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          placeholder="tu@email.com"
-          required
-          autoComplete="email"
-        />
+      <div>
+        <label className={labelCls}>Correo electrónico</label>
+        <input name="email" type="email" placeholder="tu@email.com" required autoComplete="email" className={inputCls} />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="password">Contraseña</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          placeholder="••••••••"
-          required
-          minLength={6}
-          autoComplete="new-password"
-        />
+      <div>
+        <label className={labelCls}>Contraseña</label>
+        <input name="password" type="password" placeholder="••••••••" required minLength={6} autoComplete="new-password" className={inputCls} />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="confirm_password">Confirmar contraseña</Label>
-        <Input
-          id="confirm_password"
-          name="confirm_password"
-          type="password"
-          placeholder="••••••••"
-          required
-          minLength={6}
-          autoComplete="new-password"
-        />
+      <div>
+        <label className={labelCls}>Confirmar contraseña</label>
+        <input name="confirm_password" type="password" placeholder="••••••••" required minLength={6} autoComplete="new-password" className={inputCls} />
       </div>
-      <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={loading}>
-        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-        Crear cuenta
-      </Button>
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full h-12 rounded-xl bg-emerald-600 text-white font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60 mt-2"
+      >
+        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Crear cuenta'}
+      </button>
     </form>
   )
 }

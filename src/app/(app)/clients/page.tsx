@@ -1,9 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Plus, User, Phone, ChevronRight } from 'lucide-react'
+import { Plus, Users, Phone, ChevronRight } from 'lucide-react'
 
 export default async function ClientsPage() {
   const supabase = await createClient()
@@ -15,7 +12,6 @@ export default async function ClientsPage() {
     .eq('user_id', user!.id)
     .order('name')
 
-  // Get transaction counts per client
   const { data: txCounts } = await supabase
     .from('transactions')
     .select('client_id, status')
@@ -29,71 +25,70 @@ export default async function ClientsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Clientes</h1>
-          <p className="text-slate-500 text-sm mt-1">{clients?.length ?? 0} clientes registrados</p>
+          <h1 className="text-xl font-bold text-slate-900">Clientes</h1>
+          <p className="text-sm text-slate-400">{clients?.length ?? 0} registrados</p>
         </div>
-        <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
-          <Link href="/clients/new">
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo cliente
-          </Link>
-        </Button>
+        <Link
+          href="/clients/new"
+          className="h-10 px-4 bg-emerald-600 text-white rounded-xl text-sm font-semibold flex items-center gap-2 active:scale-95 transition-transform"
+        >
+          <Plus className="h-4 w-4" />
+          Nuevo
+        </Link>
       </div>
 
       {!clients || clients.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <User className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 font-medium">Sin clientes aún</p>
-            <p className="text-slate-400 text-sm mt-1">Agrega tu primer cliente para comenzar</p>
-            <Button asChild className="mt-4 bg-emerald-600 hover:bg-emerald-700">
-              <Link href="/clients/new">
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar cliente
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-2xl shadow-sm py-16 text-center">
+          <div className="bg-slate-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <Users className="h-8 w-8 text-slate-400" />
+          </div>
+          <p className="text-slate-600 font-semibold">Sin clientes aún</p>
+          <p className="text-slate-400 text-sm mt-1">Agrega tu primer cliente para comenzar</p>
+          <Link
+            href="/clients/new"
+            className="inline-flex items-center gap-2 mt-5 h-11 px-6 bg-emerald-600 text-white rounded-xl text-sm font-semibold"
+          >
+            <Plus className="h-4 w-4" />
+            Agregar cliente
+          </Link>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {clients.map((client) => {
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          {clients.map((client, i) => {
             const counts = countMap[client.id] ?? { total: 0, pending: 0 }
+            const initials = client.name.slice(0, 2).toUpperCase()
+
             return (
-              <Link key={client.id} href={`/clients/${client.id}`}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-emerald-100 rounded-full p-2.5">
-                          <User className="h-5 w-5 text-emerald-700" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-slate-800">{client.name}</p>
-                          {client.phone && (
-                            <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                              <Phone className="h-3 w-3" />
-                              {client.phone}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-slate-300" />
-                    </div>
-                    <div className="mt-4 flex items-center gap-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {counts.total} operaciones
-                      </Badge>
-                      {counts.pending > 0 && (
-                        <Badge className="text-xs bg-amber-100 text-amber-700 hover:bg-amber-100">
-                          {counts.pending} pendiente{counts.pending !== 1 ? 's' : ''}
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+              <Link
+                key={client.id}
+                href={`/clients/${client.id}`}
+                className="flex items-center gap-3 px-4 py-4 hover:bg-slate-50 active:bg-slate-100 transition-colors border-b last:border-0"
+              >
+                <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-bold text-emerald-700">{initials}</span>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-800">{client.name}</p>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    {client.phone && (
+                      <span className="text-xs text-slate-400 flex items-center gap-1">
+                        <Phone className="h-3 w-3" />{client.phone}
+                      </span>
+                    )}
+                    <span className="text-xs text-slate-400">{counts.total} op.</span>
+                    {counts.pending > 0 && (
+                      <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                        {counts.pending} pendiente{counts.pending !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <ChevronRight className="h-4 w-4 text-slate-300 flex-shrink-0" />
               </Link>
             )
           })}

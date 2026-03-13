@@ -1,12 +1,11 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { markDeliveredAction } from '@/lib/actions/transactions'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import type { Transaction } from '@/types'
 
 function fmt(n: number) {
@@ -14,52 +13,44 @@ function fmt(n: number) {
 }
 
 export function PendingDeliveries({ transactions }: { transactions: Transaction[] }) {
+  const router = useRouter()
+
+  if (transactions.length === 0) return null
+
   async function handleDeliver(id: string) {
     const result = await markDeliveredAction(id)
     if (result?.error) {
       toast.error(result.error)
     } else {
-      toast.success('Marcado como entregado')
+      toast.success('¡Marcado como entregado!')
+      router.refresh()
     }
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Entregas pendientes</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {transactions.length === 0 ? (
-          <div className="text-center py-8">
-            <CheckCircle className="h-8 w-8 text-emerald-400 mx-auto mb-2" />
-            <p className="text-slate-400 text-sm">Todo entregado</p>
+    <div>
+      <h2 className="text-sm font-semibold text-slate-600 mb-3">Por entregar</h2>
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        {transactions.slice(0, 6).map((t) => (
+          <div key={t.id} className="flex items-center gap-3 px-4 py-3 border-b last:border-0">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-800 truncate">
+                {(t.clients as { name: string } | undefined)?.name ?? '—'}
+              </p>
+              <p className="text-xs text-slate-400">
+                ${fmt(t.amount)} {t.currency} · {format(new Date(t.created_at), 'dd MMM', { locale: es })}
+              </p>
+            </div>
+            <button
+              onClick={() => handleDeliver(t.id)}
+              className="flex-shrink-0 h-9 px-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-transform"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Entregado
+            </button>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {transactions.slice(0, 8).map((t) => (
-              <div key={t.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                <div>
-                  <p className="text-sm font-medium text-slate-800">
-                    {(t.clients as { name: string } | undefined)?.name ?? '—'}
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    ${fmt(t.amount)} {t.currency} ·{' '}
-                    {format(new Date(t.created_at), 'dd MMM', { locale: es })}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                  onClick={() => handleDeliver(t.id)}
-                >
-                  Marcar entregado
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        ))}
+      </div>
+    </div>
   )
 }

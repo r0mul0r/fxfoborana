@@ -1,11 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, Plus, User, Phone, Mail, TrendingUp, DollarSign } from 'lucide-react'
+import { ArrowLeft, Plus, Phone, Mail, TrendingUp, DollarSign, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ClientTransactionActions } from '@/components/clients/client-transaction-actions'
@@ -37,150 +33,110 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
     .order('created_at', { ascending: false })
 
   const all: Transaction[] = transactions ?? []
-  const pending = all.filter(t => t.status === 'pending')
-  const totalAmount = all.reduce((acc, t) => acc + Number(t.amount), 0)
-  const totalProfit = all.reduce((acc, t) => acc + Number(t.profit ?? 0), 0)
+  const pending       = all.filter(t => t.status === 'pending')
+  const totalAmount   = all.reduce((acc, t) => acc + Number(t.amount), 0)
+  const totalProfit   = all.reduce((acc, t) => acc + Number(t.profit ?? 0), 0)
   const pendingAmount = pending.reduce((acc, t) => acc + Number(t.amount), 0)
+  const initials      = client.name.slice(0, 2).toUpperCase()
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/clients">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Clientes
-          </Link>
-        </Button>
-      </div>
+    <div className="space-y-5">
+      {/* Back */}
+      <Link href="/clients" className="inline-flex items-center gap-1 text-sm text-slate-500 active:text-slate-800">
+        <ArrowLeft className="h-4 w-4" />
+        Clientes
+      </Link>
 
-      {/* Client info */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bg-emerald-100 rounded-full p-3">
-                <User className="h-6 w-6 text-emerald-700" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900">{client.name}</h1>
-                <div className="flex items-center gap-3 mt-1">
-                  {client.phone && (
-                    <span className="text-sm text-slate-500 flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      {client.phone}
-                    </span>
-                  )}
-                  {client.email && (
-                    <span className="text-sm text-slate-500 flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      {client.email}
-                    </span>
-                  )}
-                </div>
-                {client.notes && (
-                  <p className="text-sm text-slate-400 mt-1">{client.notes}</p>
-                )}
-              </div>
+      {/* Header card */}
+      <div className="bg-white rounded-2xl shadow-sm p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="h-14 w-14 rounded-2xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+              <span className="text-xl font-bold text-emerald-700">{initials}</span>
             </div>
-            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700">
-              <Link href={`/transactions/new?client_id=${client.id}`}>
-                <Plus className="h-4 w-4 mr-1" />
-                Nueva transacción
-              </Link>
-            </Button>
+            <div>
+              <h1 className="text-lg font-bold text-slate-900">{client.name}</h1>
+              {client.phone && (
+                <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
+                  <Phone className="h-3 w-3" />{client.phone}
+                </p>
+              )}
+              {client.email && (
+                <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
+                  <Mail className="h-3 w-3" />{client.email}
+                </p>
+              )}
+            </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Summary stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <DollarSign className="h-4 w-4 text-slate-400" />
-              <p className="text-xs text-slate-500">Total comprado</p>
-            </div>
-            <p className="text-xl font-bold text-slate-800">${fmt(totalAmount)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-4 w-4 text-emerald-400" />
-              <p className="text-xs text-slate-500">Ganancia generada</p>
-            </div>
-            <p className="text-xl font-bold text-emerald-600">${fmt(totalProfit)}</p>
-            <p className="text-xs text-slate-400 mt-0.5">USD neto (c/3% com.)</p>
-          </CardContent>
-        </Card>
-        <Card className={pendingAmount > 0 ? 'bg-amber-50 border-amber-200' : ''}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <DollarSign className="h-4 w-4 text-amber-400" />
-              <p className="text-xs text-slate-500">Por entregar</p>
-            </div>
-            <p className={`text-xl font-bold ${pendingAmount > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
-              ${fmt(pendingAmount)}
-            </p>
-          </CardContent>
-        </Card>
+          <Link
+            href={`/transactions/new?client_id=${client.id}`}
+            className="h-9 px-3 bg-emerald-600 text-white rounded-xl text-sm font-semibold flex items-center gap-1.5 flex-shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            Nueva
+          </Link>
+        </div>
       </div>
 
-      {/* Transaction history */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Historial de transacciones</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {all.length === 0 ? (
-            <p className="text-slate-400 text-sm text-center py-8">Sin transacciones aún</p>
-          ) : (
-            <div className="space-y-0">
-              {all.map((tx, i) => (
-                <div key={tx.id}>
-                  {i > 0 && <Separator />}
-                  <div className="flex items-center justify-between py-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-slate-800">
-                          ${fmt(tx.amount)} {tx.currency}
-                        </span>
-                        <Badge
-                          variant={tx.status === 'delivered' ? 'default' : 'secondary'}
-                          className={`text-xs ${
-                            tx.status === 'delivered'
-                              ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100'
-                              : 'bg-amber-100 text-amber-700 hover:bg-amber-100'
-                          }`}
-                        >
-                          {tx.status === 'delivered' ? 'Entregado' : 'Pendiente'}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
-                        <span>Compra: {fmt(tx.buy_rate)} / Mercado: {fmt(tx.market_rate)}</span>
-                        <span>·</span>
-                        <span className="text-emerald-600 font-medium">
-                          Ganancia: ${fmt(tx.profit ?? 0)} USD
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {format(new Date(tx.created_at), "dd 'de' MMMM yyyy, HH:mm", { locale: es })}
-                        {tx.delivered_at && (
-                          <> · Entregado: {format(new Date(tx.delivered_at), "dd MMM yyyy", { locale: es })}</>
-                        )}
-                      </p>
-                      {tx.notes && (
-                        <p className="text-xs text-slate-400 italic mt-0.5">{tx.notes}</p>
-                      )}
-                    </div>
-                    <ClientTransactionActions transaction={tx} />
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-white rounded-2xl shadow-sm p-3 text-center">
+          <DollarSign className="h-4 w-4 text-slate-400 mx-auto mb-1" />
+          <p className="text-lg font-bold text-slate-900 tabular-nums">${fmt(totalAmount)}</p>
+          <p className="text-xs text-slate-400 leading-tight">total comprado</p>
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm p-3 text-center">
+          <TrendingUp className="h-4 w-4 text-emerald-500 mx-auto mb-1" />
+          <p className="text-lg font-bold text-emerald-600 tabular-nums">${fmt(totalProfit)}</p>
+          <p className="text-xs text-slate-400 leading-tight">ganancia neta</p>
+        </div>
+        <div className={`rounded-2xl shadow-sm p-3 text-center ${pendingAmount > 0 ? 'bg-amber-50' : 'bg-white'}`}>
+          <Clock className={`h-4 w-4 mx-auto mb-1 ${pendingAmount > 0 ? 'text-amber-500' : 'text-slate-300'}`} />
+          <p className={`text-lg font-bold tabular-nums ${pendingAmount > 0 ? 'text-amber-600' : 'text-slate-300'}`}>
+            ${fmt(pendingAmount)}
+          </p>
+          <p className="text-xs text-slate-400 leading-tight">por entregar</p>
+        </div>
+      </div>
+
+      {/* Historial */}
+      <div>
+        <h2 className="text-sm font-semibold text-slate-600 mb-3">Historial</h2>
+        {all.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-sm py-10 text-center">
+            <p className="text-slate-400 text-sm">Sin transacciones aún</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            {all.map((tx) => (
+              <div key={tx.id} className="flex items-center gap-3 px-4 py-4 border-b last:border-0">
+                <div className={`h-2 w-2 rounded-full flex-shrink-0 mt-0.5 ${tx.status === 'delivered' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-800">${fmt(tx.amount)} {tx.currency}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      tx.status === 'delivered'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-amber-50 text-amber-700'
+                    }`}>
+                      {tx.status === 'delivered' ? 'Entregado' : 'Pendiente'}
+                    </span>
                   </div>
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
+                    <span>Compra {fmt(tx.buy_rate)} · Mercado {fmt(tx.market_rate)}</span>
+                    <span className="text-emerald-600 font-semibold">${fmt(tx.profit ?? 0)}</span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {format(new Date(tx.created_at), "dd MMM yyyy, HH:mm", { locale: es })}
+                  </p>
+                  {tx.notes && <p className="text-xs text-slate-400 italic mt-0.5">{tx.notes}</p>}
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <ClientTransactionActions transaction={tx} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
