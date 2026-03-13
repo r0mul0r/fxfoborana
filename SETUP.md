@@ -3,7 +3,9 @@
 ## 1. Supabase Setup
 
 1. Ve a [supabase.com](https://supabase.com) y crea un proyecto nuevo
-2. En el SQL Editor, ejecuta el contenido de `supabase/migrations/001_initial_schema.sql`
+2. En el SQL Editor, ejecuta en orden:
+   - `supabase/migrations/001_initial_schema.sql`
+   - `supabase/migrations/003_expenses.sql`
 3. Copia las credenciales: Project URL y anon public key
 
 ## 2. Variables de entorno

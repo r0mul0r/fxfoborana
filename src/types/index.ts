@@ -28,6 +28,23 @@ export interface Transaction {
   clients?: Client
 }
 
+export type ExpenseCategory =
+  | 'comida'
+  | 'transporte'
+  | 'servicios'
+  | 'entretenimiento'
+  | 'salud'
+  | 'otro'
+
+export interface Expense {
+  id: string
+  user_id: string
+  amount: number
+  category: ExpenseCategory
+  description: string
+  created_at: string
+}
+
 export interface DashboardStats {
   totalAmountDay: number
   totalAmountWeek: number
