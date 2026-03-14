@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { ArrowLeft, Plus, Phone, Mail, TrendingUp, DollarSign, Clock, Banknote } from 'lucide-react'
+import { ArrowLeft, Plus, Phone, Mail, TrendingUp, DollarSign, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ClientTransactionActions } from '@/components/clients/client-transaction-actions'
@@ -52,11 +52,8 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const pending       = all.filter(t => t.status === 'pending')
   const totalAmount   = all.reduce((acc, t) => acc + Number(t.amount), 0)
   const totalProfit   = all.reduce((acc, t) => acc + Number(t.profit ?? 0), 0)
-  const pendingAmount = pending.reduce((acc, t) => acc + Number(t.amount), 0)
-
-  // Total paid and total debt across all transactions
-  const totalPaid = all.reduce((acc, t) => acc + (paidMap[t.id] ?? 0), 0)
-  const totalDebt = all.reduce((acc, t) => acc + Math.max(0, Number(t.amount) - (paidMap[t.id] ?? 0)), 0)
+  // "Por entregar" = monto pendiente menos lo ya abonado
+  const pendingAmount = pending.reduce((acc, t) => acc + Math.max(0, Number(t.amount) - (paidMap[t.id] ?? 0)), 0)
 
   const initials = client.name.slice(0, 2).toUpperCase()
 
@@ -123,41 +120,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         </div>
       </div>
 
-      {/* Payment summary */}
-      {totalAmount > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Banknote className="h-4 w-4 text-blue-500" />
-            <h2 className="text-sm font-semibold text-slate-700">Resumen de cobros</h2>
-          </div>
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div>
-              <p className="text-base font-bold text-slate-800 tabular-nums">${fmt(totalAmount)}</p>
-              <p className="text-xs text-slate-400">total</p>
-            </div>
-            <div>
-              <p className="text-base font-bold text-emerald-600 tabular-nums">${fmt(totalPaid)}</p>
-              <p className="text-xs text-slate-400">abonado</p>
-            </div>
-            <div className={totalDebt > 0 ? '' : ''}>
-              <p className={`text-base font-bold tabular-nums ${totalDebt > 0 ? 'text-red-500' : 'text-slate-300'}`}>
-                ${fmt(totalDebt)}
-              </p>
-              <p className="text-xs text-slate-400">pendiente</p>
-            </div>
-          </div>
-          {totalAmount > 0 && (
-            <div className="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
-              <div
-                className="h-full bg-emerald-500 rounded-full transition-all"
-                style={{ width: `${Math.min(100, (totalPaid / totalAmount) * 100).toFixed(1)}%` }}
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Historial */}
+{/* Historial */}
       <div>
         <h2 className="text-sm font-semibold text-slate-600 mb-3">Historial</h2>
         {all.length === 0 ? (
@@ -168,7 +131,6 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             {all.map((tx) => {
               const paid = paidMap[tx.id] ?? 0
-              const debt = Math.max(0, Number(tx.amount) - paid)
               return (
                 <div key={tx.id} className="flex items-start gap-3 px-4 py-4 border-b last:border-0">
                   <div className={`h-2 w-2 rounded-full flex-shrink-0 mt-2 ${tx.status === 'delivered' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
@@ -187,23 +149,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                       <span>Compra {fmt(tx.buy_rate)} · Mercado {fmt(tx.market_rate)}</span>
                       <span className="text-emerald-600 font-semibold">${fmt(tx.profit ?? 0)}</span>
                     </div>
-                    {/* Payment status */}
-                    <div className="flex items-center gap-3 mt-1 text-xs">
-                      {paid > 0 && (
-                        <span className="text-emerald-600 font-medium">
-                          Abonado: ${fmt(paid)}
-                        </span>
-                      )}
-                      {debt > 0 && (
-                        <span className="text-red-500 font-medium">
-                          Debe: ${fmt(debt)}
-                        </span>
-                      )}
-                      {debt === 0 && paid > 0 && (
-                        <span className="text-emerald-600 font-medium">Pagado completo ✓</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-400 mt-0.5">
+<p className="text-xs text-slate-400 mt-0.5">
                       {format(new Date(tx.created_at), "dd MMM yyyy, HH:mm", { locale: es })}
                     </p>
                     {tx.notes && <p className="text-xs text-slate-400 italic mt-0.5">{tx.notes}</p>}
