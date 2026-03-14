@@ -44,8 +44,11 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   // Build a map: transaction_id -> total amount paid
   const paidMap: Record<string, number> = {}
+  const paymentsMap: Record<string, Payment[]> = {}
   for (const p of (allPayments as Payment[]) ?? []) {
     paidMap[p.transaction_id] = (paidMap[p.transaction_id] ?? 0) + Number(p.amount)
+    if (!paymentsMap[p.transaction_id]) paymentsMap[p.transaction_id] = []
+    paymentsMap[p.transaction_id].push(p)
   }
 
   const all: Transaction[] = transactions ?? []
@@ -131,6 +134,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             {all.map((tx) => {
               const paid = paidMap[tx.id] ?? 0
+              const txPayments = paymentsMap[tx.id] ?? []
               return (
                 <div key={tx.id} className="flex items-start gap-3 px-4 py-4 border-b last:border-0">
                   <div className={`h-2 w-2 rounded-full flex-shrink-0 mt-2 ${tx.status === 'delivered' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
@@ -149,10 +153,30 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                       <span>Compra {fmt(tx.buy_rate)} · Mercado {fmt(tx.market_rate)}</span>
                       <span className="text-emerald-600 font-semibold">${fmt(tx.profit ?? 0)}</span>
                     </div>
-<p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-400 mt-0.5">
                       {format(new Date(tx.created_at), "dd MMM yyyy, HH:mm", { locale: es })}
                     </p>
                     {tx.notes && <p className="text-xs text-slate-400 italic mt-0.5">{tx.notes}</p>}
+
+                    {/* Abonos */}
+                    {txPayments.length > 0 && (
+                      <div className="mt-2 pl-2 border-l-2 border-emerald-100 space-y-1">
+                        {txPayments.map(p => (
+                          <div key={p.id} className="flex items-center gap-2 text-xs">
+                            <span className="text-emerald-600 font-medium">+ ${fmt(Number(p.amount))}</span>
+                            <span className="text-slate-400">{format(new Date(p.created_at), "dd MMM, HH:mm", { locale: es })}</span>
+                            {p.notes && <span className="text-slate-400 italic">{p.notes}</span>}
+                          </div>
+                        ))}
+                        <div className="flex items-center gap-2 text-xs pt-0.5">
+                          <span className="text-slate-500 font-medium">Abonado: ${fmt(paid)}</span>
+                          {Math.max(0, Number(tx.amount) - paid) === 0
+                            ? <span className="text-emerald-600 font-semibold">· Pagado ✓</span>
+                            : <span className="text-amber-600">· Resta: ${fmt(Math.max(0, Number(tx.amount) - paid))}</span>
+                          }
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <ClientTransactionActions transaction={tx} amountPaid={paid} />
                 </div>
