@@ -12,7 +12,7 @@ function fmt(n: number) {
   return new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2 }).format(n)
 }
 
-export function PendingDeliveries({ transactions }: { transactions: Transaction[] }) {
+export function PendingDeliveries({ transactions, paidMap = {} }: { transactions: Transaction[], paidMap?: Record<string, number> }) {
   const router = useRouter()
 
   if (transactions.length === 0) return null
@@ -38,7 +38,7 @@ export function PendingDeliveries({ transactions }: { transactions: Transaction[
                 {(t.clients as { name: string } | undefined)?.name ?? '—'}
               </p>
               <p className="text-xs text-slate-400">
-                ${fmt(t.amount)} {t.currency} · {format(new Date(t.created_at), 'dd MMM', { locale: es })}
+                ${fmt(Math.max(0, Number(t.amount) - (paidMap[t.id] ?? 0)))} {t.currency} · {format(new Date(t.created_at), 'dd MMM', { locale: es })}
               </p>
             </div>
             <button
