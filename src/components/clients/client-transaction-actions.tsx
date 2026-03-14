@@ -2,13 +2,20 @@
 
 import { markDeliveredAction, deleteTransactionAction } from '@/lib/actions/transactions'
 import { Button } from '@/components/ui/button'
+import { AddPaymentDialog } from '@/components/clients/add-payment-dialog'
 import { toast } from 'sonner'
 import { CheckCheck, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import type { Transaction } from '@/types'
 
-export function ClientTransactionActions({ transaction }: { transaction: Transaction }) {
+interface Props {
+  transaction: Transaction
+  amountPaid: number
+}
+
+export function ClientTransactionActions({ transaction, amountPaid }: Props) {
   const router = useRouter()
+  const pending = Math.max(0, Number(transaction.amount) - amountPaid)
 
   async function handleDeliver() {
     const result = await markDeliveredAction(transaction.id)
@@ -31,7 +38,15 @@ export function ClientTransactionActions({ transaction }: { transaction: Transac
   }
 
   return (
-    <div className="flex items-center gap-1 ml-4">
+    <div className="flex items-center gap-1 ml-2">
+      {pending > 0 && (
+        <AddPaymentDialog
+          transactionId={transaction.id}
+          clientId={transaction.client_id}
+          maxAmount={pending}
+          currency={transaction.currency}
+        />
+      )}
       {transaction.status === 'pending' && (
         <Button
           size="sm"

@@ -31,6 +31,34 @@ export async function createClientAction(formData: FormData) {
   redirect('/clients')
 }
 
+export async function updateClientAction(id: string, formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+
+  const name = formData.get('name') as string
+  const phone = formData.get('phone') as string
+  const email = formData.get('email') as string
+  const notes = formData.get('notes') as string
+
+  const { error } = await supabase
+    .from('clients')
+    .update({
+      name,
+      phone: phone || null,
+      email: email || null,
+      notes: notes || null,
+    })
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/clients/${id}`)
+  revalidatePath('/clients')
+  return { success: true }
+}
+
 export async function deleteClientAction(id: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
