@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { createPaymentAction } from '@/lib/actions/payments'
 import { toast } from 'sonner'
 import { Banknote, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -52,15 +51,11 @@ export function AddPaymentDialog({ transactionId, clientId, maxAmount, currency 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 px-2"
-          title="Registrar abono"
-        >
-          <Banknote className="h-4 w-4" />
-        </Button>
+      <DialogTrigger
+        className="inline-flex items-center justify-center text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 px-2 rounded-lg transition-colors"
+        title="Registrar abono"
+      >
+        <Banknote className="h-4 w-4" />
       </DialogTrigger>
       <DialogContent className="max-w-sm rounded-2xl">
         <DialogHeader>

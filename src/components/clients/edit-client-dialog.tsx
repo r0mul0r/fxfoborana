@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { updateClientAction } from '@/lib/actions/clients'
 import { toast } from 'sonner'
 import { Pencil, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -40,15 +39,9 @@ export function EditClientDialog({ client }: { client: Client }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 h-9 px-3 gap-1.5"
-        >
-          <Pencil className="h-4 w-4" />
-          Editar
-        </Button>
+      <DialogTrigger className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 h-9 px-3 rounded-xl text-sm font-medium transition-colors">
+        <Pencil className="h-4 w-4" />
+        Editar
       </DialogTrigger>
       <DialogContent className="max-w-sm rounded-2xl">
         <DialogHeader>
