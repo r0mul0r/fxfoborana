@@ -15,7 +15,63 @@ function fmtUsdt(n: number) {
 }
 
 function parseNum(s: string) {
+  // Accept both comma and dot as decimal separator
+  return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0
+}
+
+function parseRaw(s: string) {
+  // For raw editing: only replace comma→dot, keep dots as-is while typing
   return parseFloat(s.replace(',', '.')) || 0
+}
+
+/** Input with currency prefix label and thousand-separator formatting on blur */
+function CurrencyInput({
+  value,
+  onChange,
+  prefix,
+  decimals = 2,
+  placeholder = '0',
+}: {
+  value: number
+  onChange: (n: number) => void
+  prefix: string
+  decimals?: number
+  placeholder?: string
+}) {
+  const [focused, setFocused] = useState(false)
+  const [raw, setRaw] = useState('')
+
+  const formatted =
+    value > 0
+      ? new Intl.NumberFormat('es-VE', {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+        }).format(value)
+      : ''
+
+  return (
+    <div className="flex items-center h-10 rounded-xl border border-slate-200 focus-within:ring-2 focus-within:ring-amber-400 overflow-hidden bg-white">
+      <span className="pl-3 pr-1.5 text-xs font-bold text-amber-600 flex-shrink-0 select-none border-r border-slate-100 h-full flex items-center">
+        {prefix}
+      </span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={focused ? raw : formatted}
+        placeholder={focused ? '' : placeholder}
+        onFocus={() => {
+          setRaw(value > 0 ? String(value) : '')
+          setFocused(true)
+        }}
+        onBlur={() => {
+          setFocused(false)
+          onChange(parseRaw(raw))
+        }}
+        onChange={(e) => setRaw(e.target.value)}
+        className="flex-1 h-full px-2 text-slate-900 text-sm font-medium focus:outline-none bg-transparent min-w-0"
+      />
+    </div>
+  )
 }
 
 function newOp(): P2POperation {
@@ -31,7 +87,7 @@ export function P2POrderForm() {
 
   const base = parseNum(baseAmount)
   const sell = parseNum(sellRate)
-  const commPct = parseNum(commissionPct)
+  const commPct = parseFloat(commissionPct) || 0
 
   const calc = calcOrder({
     baseAmount: base,
@@ -40,9 +96,9 @@ export function P2POrderForm() {
     operations,
   })
 
-  const updateOp = useCallback((id: string, field: 'bsSent' | 'usdtReceived', val: string) => {
+  const updateOp = useCallback((id: string, field: 'bsSent' | 'usdtReceived', val: number) => {
     setOperations((prev) =>
-      prev.map((op) => op.id === id ? { ...op, [field]: parseNum(val) } : op)
+      prev.map((op) => (op.id === id ? { ...op, [field]: val } : op))
     )
   }, [])
 
@@ -150,21 +206,17 @@ export function P2POrderForm() {
 
         {operations.map((op) => (
           <div key={op.id} className="grid grid-cols-[1fr_1fr_auto] gap-2 px-4 py-2.5 items-center border-b last:border-0">
-            <input
-              type="number"
-              inputMode="decimal"
-              placeholder="0"
-              defaultValue={op.bsSent || ''}
-              onChange={(e) => updateOp(op.id, 'bsSent', e.target.value)}
-              className="h-10 px-3 rounded-xl border border-slate-200 text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 w-full"
+            <CurrencyInput
+              value={op.bsSent}
+              onChange={(n) => updateOp(op.id, 'bsSent', n)}
+              prefix="Bs"
+              decimals={2}
             />
-            <input
-              type="number"
-              inputMode="decimal"
-              placeholder="0"
-              defaultValue={op.usdtReceived || ''}
-              onChange={(e) => updateOp(op.id, 'usdtReceived', e.target.value)}
-              className="h-10 px-3 rounded-xl border border-slate-200 text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 w-full"
+            <CurrencyInput
+              value={op.usdtReceived}
+              onChange={(n) => updateOp(op.id, 'usdtReceived', n)}
+              prefix="USDT"
+              decimals={4}
             />
             <button
               onClick={() => removeOp(op.id)}
