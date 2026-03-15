@@ -19,7 +19,7 @@ function parseNum(s: string) {
 }
 
 function newOp(): P2POperation {
-  return { id: crypto.randomUUID(), usdt: 0, rate: 0, commission: 0 }
+  return { id: crypto.randomUUID(), bsSent: 0, usdtReceived: 0 }
 }
 
 export function P2POrderForm() {
@@ -40,11 +40,9 @@ export function P2POrderForm() {
     operations,
   })
 
-  const updateOp = useCallback((id: string, field: keyof P2POperation, val: string) => {
+  const updateOp = useCallback((id: string, field: 'bsSent' | 'usdtReceived', val: string) => {
     setOperations((prev) =>
-      prev.map((op) =>
-        op.id === id ? { ...op, [field]: field === 'id' ? val : parseNum(val) } : op
-      )
+      prev.map((op) => op.id === id ? { ...op, [field]: parseNum(val) } : op)
     )
   }, [])
 
@@ -75,7 +73,7 @@ export function P2POrderForm() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs text-slate-500 font-medium">Bs recibidos</label>
+            <label className="text-xs text-slate-500 font-medium">Bs recibidos del cliente</label>
             <input
               type="number"
               inputMode="decimal"
@@ -115,11 +113,11 @@ export function P2POrderForm() {
         {base > 0 && sell > 0 && (
           <div className="bg-amber-50 rounded-xl p-3 grid grid-cols-3 gap-3 text-center">
             <div>
-              <p className="text-xs text-amber-600 font-medium">Comisión</p>
+              <p className="text-xs text-amber-600 font-medium">Comisión {commPct}%</p>
               <p className="text-sm font-bold text-slate-800">Bs {fmt(calc.commissionFee)}</p>
             </div>
             <div>
-              <p className="text-xs text-amber-600 font-medium">Bs neto</p>
+              <p className="text-xs text-amber-600 font-medium">Bs neto disponible</p>
               <p className="text-sm font-bold text-slate-800">Bs {fmt(calc.netBs)}</p>
             </div>
             <div>
@@ -144,68 +142,49 @@ export function P2POrderForm() {
         </div>
 
         {/* Column headers */}
-        <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 px-4 py-2 bg-slate-50 text-xs text-slate-400 font-medium">
-          <span>USDT</span>
-          <span>Tasa (Bs)</span>
-          <span>Comisión (Bs)</span>
+        <div className="grid grid-cols-[1fr_1fr_auto] gap-2 px-4 py-2 bg-slate-50 text-xs text-slate-400 font-medium">
+          <span>Bs enviados</span>
+          <span>USDT recibidos</span>
           <span className="w-8" />
         </div>
 
-        {operations.map((op) => {
-          const rowTotal = op.usdt * op.rate + op.commission
-          return (
-            <div key={op.id} className="border-b last:border-0">
-              <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 px-4 py-2 items-center">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  placeholder="0"
-                  defaultValue={op.usdt || ''}
-                  onChange={(e) => updateOp(op.id, 'usdt', e.target.value)}
-                  className="h-9 px-2 rounded-lg border border-slate-200 text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 w-full"
-                />
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  placeholder="0"
-                  defaultValue={op.rate || ''}
-                  onChange={(e) => updateOp(op.id, 'rate', e.target.value)}
-                  className="h-9 px-2 rounded-lg border border-slate-200 text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 w-full"
-                />
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  placeholder="0"
-                  defaultValue={op.commission || ''}
-                  onChange={(e) => updateOp(op.id, 'commission', e.target.value)}
-                  className="h-9 px-2 rounded-lg border border-slate-200 text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 w-full"
-                />
-                <button
-                  onClick={() => removeOp(op.id)}
-                  disabled={operations.length === 1}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 disabled:opacity-30 transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-              {rowTotal > 0 && (
-                <p className="px-4 pb-2 text-xs text-slate-400">
-                  Total fila: <span className="font-semibold text-slate-600">Bs {fmt(rowTotal)}</span>
-                </p>
-              )}
-            </div>
-          )
-        })}
+        {operations.map((op) => (
+          <div key={op.id} className="grid grid-cols-[1fr_1fr_auto] gap-2 px-4 py-2.5 items-center border-b last:border-0">
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="0"
+              defaultValue={op.bsSent || ''}
+              onChange={(e) => updateOp(op.id, 'bsSent', e.target.value)}
+              className="h-10 px-3 rounded-xl border border-slate-200 text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 w-full"
+            />
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="0"
+              defaultValue={op.usdtReceived || ''}
+              onChange={(e) => updateOp(op.id, 'usdtReceived', e.target.value)}
+              className="h-10 px-3 rounded-xl border border-slate-200 text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 w-full"
+            />
+            <button
+              onClick={() => removeOp(op.id)}
+              disabled={operations.length === 1}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 disabled:opacity-30 transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
 
         {/* Totales tabla */}
         <div className="grid grid-cols-2 gap-3 px-4 py-3 bg-slate-50 border-t border-slate-100">
           <div>
-            <p className="text-xs text-slate-400">Total USDT comprados</p>
-            <p className="text-sm font-bold text-slate-800">{fmtUsdt(calc.totalUsdtBought)} USDT</p>
+            <p className="text-xs text-slate-400">Total Bs enviados</p>
+            <p className="text-sm font-bold text-slate-800">Bs {fmt(calc.totalBsSpent)}</p>
           </div>
           <div>
-            <p className="text-xs text-slate-400">Total Bs gastados</p>
-            <p className="text-sm font-bold text-slate-800">Bs {fmt(calc.totalBsSpent)}</p>
+            <p className="text-xs text-slate-400">Total USDT recibidos</p>
+            <p className="text-sm font-bold text-slate-800">{fmtUsdt(calc.totalUsdtBought)} USDT</p>
           </div>
         </div>
       </div>
@@ -236,11 +215,11 @@ export function P2POrderForm() {
               <p className="font-bold">-Bs {fmt(calc.commissionFee)}</p>
             </div>
             <div>
-              <p className="opacity-70 text-xs">Bs gastados (Binance)</p>
+              <p className="opacity-70 text-xs">Bs enviados a Binance</p>
               <p className="font-bold">-Bs {fmt(calc.totalBsSpent)}</p>
             </div>
             <div>
-              <p className="opacity-70 text-xs">USDT comprados vs entregados</p>
+              <p className="opacity-70 text-xs">USDT recibidos / entregados</p>
               <p className="font-bold">{fmtUsdt(calc.totalUsdtBought)} / {fmtUsdt(calc.usdtSold)}</p>
             </div>
           </div>

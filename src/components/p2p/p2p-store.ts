@@ -1,15 +1,14 @@
 export interface P2POperation {
   id: string
-  usdt: number
-  rate: number       // Bs/USDT buy rate on Binance
-  commission: number // Bs commission for this operation
+  bsSent: number      // Bs enviados a Binance para esta compra
+  usdtReceived: number // USDT recibidos (ya netos de comisión Binance)
 }
 
 export interface P2POrder {
   id: string
   createdAt: string
-  baseAmount: number    // Bs received from client
-  sellRate: number      // Bs/USDT rate charged to client
+  baseAmount: number    // Bs recibidos del cliente
+  sellRate: number      // Bs/USDT tasa cobrada al cliente
   commissionPct: number // e.g. 0.3
   operations: P2POperation[]
 }
@@ -50,8 +49,8 @@ export function calcOrder(order: Pick<P2POrder, 'baseAmount' | 'sellRate' | 'com
   const commissionFee = order.baseAmount * (order.commissionPct / 100)
   const netBs = order.baseAmount - commissionFee
   const usdtSold = order.sellRate > 0 ? order.baseAmount / order.sellRate : 0
-  const totalUsdtBought = order.operations.reduce((s, o) => s + o.usdt, 0)
-  const totalBsSpent = order.operations.reduce((s, o) => s + o.usdt * o.rate + o.commission, 0)
+  const totalUsdtBought = order.operations.reduce((s, o) => s + o.usdtReceived, 0)
+  const totalBsSpent = order.operations.reduce((s, o) => s + o.bsSent, 0)
   const profit = netBs - totalBsSpent
   return { commissionFee, netBs, usdtSold, totalUsdtBought, totalBsSpent, profit }
 }
