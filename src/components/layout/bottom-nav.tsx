@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Users, ArrowLeftRight, Plus, Receipt } from 'lucide-react'
+import { LayoutDashboard, Users, ArrowLeftRight, Plus, Receipt, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const leftItems = [
@@ -12,6 +12,7 @@ const leftItems = [
 const rightItems = [
   { href: '/transactions', label: 'Divisas', icon: ArrowLeftRight },
   { href: '/expenses',     label: 'Gastos',  icon: Receipt },
+  { href: '/p2p',          label: 'P2P',     icon: TrendingUp },
 ]
 
 export function BottomNav() {
