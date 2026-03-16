@@ -4,6 +4,7 @@ import { startOfDay, startOfWeek, startOfMonth, format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Plus, Receipt, ChevronLeft, ChevronRight } from 'lucide-react'
 import { ExpenseDeleteButton } from '@/components/expenses/expense-delete-button'
+import { DateRangeFilter } from '@/components/ui/date-range-filter'
 import type { Expense } from '@/types'
 
 const PAGE_SIZE = 10
@@ -24,12 +25,12 @@ function fmt(n: number) {
 export default async function ExpensesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ page?: string; from?: string; to?: string }>
 }) {
-  const { page: pageParam } = await searchParams
+  const { page: pageParam, from: dateFrom, to: dateTo } = await searchParams
   const page = Math.max(1, parseInt(pageParam ?? '1'))
-  const from = (page - 1) * PAGE_SIZE
-  const to = from + PAGE_SIZE - 1
+  const rangeFrom = (page - 1) * PAGE_SIZE
+  const rangeTo = rangeFrom + PAGE_SIZE - 1
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -39,7 +40,7 @@ export default async function ExpensesPage({
   const weekStart  = startOfWeek(now, { weekStartsOn: 1 }).toISOString()
   const monthStart = startOfMonth(now).toISOString()
 
-  // Stats: fetch all for current month (efficient enough for personal use)
+  // Stats: always show day/week/month totals (unaffected by date filter)
   const { data: allMonth } = await supabase
     .from('expenses')
     .select('amount, created_at')
@@ -52,16 +53,29 @@ export default async function ExpensesPage({
   const weekTotal  = monthExpenses.filter(e => e.created_at >= weekStart).reduce((s, e) => s + Number(e.amount), 0)
   const monthTotal = monthExpenses.reduce((s, e) => s + Number(e.amount), 0)
 
-  // Paginated history
-  const { data: expenses, count } = await supabase
+  // Paginated history — filtered by date range if provided
+  let historyQuery = supabase
     .from('expenses')
     .select('*', { count: 'exact' })
     .eq('user_id', user!.id)
     .order('created_at', { ascending: false })
-    .range(from, to)
+
+  if (dateFrom) historyQuery = historyQuery.gte('created_at', `${dateFrom}T00:00:00`)
+  if (dateTo)   historyQuery = historyQuery.lte('created_at', `${dateTo}T23:59:59`)
+
+  const { data: expenses, count } = await historyQuery.range(rangeFrom, rangeTo)
 
   const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE)
   const items: Expense[] = expenses ?? []
+
+  // Build pagination href preserving date params
+  function pageHref(p: number) {
+    const params = new URLSearchParams()
+    params.set('page', String(p))
+    if (dateFrom) params.set('from', dateFrom)
+    if (dateTo)   params.set('to', dateTo)
+    return `/expenses?${params.toString()}`
+  }
 
   return (
     <div className="space-y-5">
@@ -69,7 +83,7 @@ export default async function ExpensesPage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Gastos personales</h1>
-          <p className="text-sm text-slate-400">{count ?? 0} registros en total</p>
+          <p className="text-sm text-slate-400">{count ?? 0} registros</p>
         </div>
         <Link
           href="/expenses/new"
@@ -96,6 +110,9 @@ export default async function ExpensesPage({
         </div>
       </div>
 
+      {/* Date filter */}
+      <DateRangeFilter from={dateFrom} to={dateTo} />
+
       {/* History */}
       <div>
         <h2 className="text-sm font-semibold text-slate-600 mb-3">Historial</h2>
@@ -105,7 +122,7 @@ export default async function ExpensesPage({
             <div className="bg-slate-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
               <Receipt className="h-8 w-8 text-slate-400" />
             </div>
-            <p className="text-slate-600 font-semibold">Sin gastos aún</p>
+            <p className="text-slate-600 font-semibold">Sin gastos en este rango</p>
             <p className="text-slate-400 text-sm mt-1">Registra tu primer gasto</p>
             <Link
               href="/expenses/new"
@@ -122,12 +139,9 @@ export default async function ExpensesPage({
                 const meta = CATEGORY_META[expense.category] ?? CATEGORY_META.otro
                 return (
                   <div key={expense.id} className="flex items-center gap-3 px-4 py-3.5 border-b last:border-0">
-                    {/* Category icon */}
                     <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${meta.color}`}>
                       {meta.emoji}
                     </div>
-
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-800 truncate">{expense.description}</p>
                       <div className="flex items-center gap-2 mt-0.5">
@@ -139,8 +153,6 @@ export default async function ExpensesPage({
                         </span>
                       </div>
                     </div>
-
-                    {/* Amount */}
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <p className="text-base font-bold text-rose-500">-${fmt(expense.amount)}</p>
                       <ExpenseDeleteButton id={expense.id} />
@@ -154,7 +166,7 @@ export default async function ExpensesPage({
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-4">
                 <Link
-                  href={page > 1 ? `/expenses?page=${page - 1}` : '#'}
+                  href={page > 1 ? pageHref(page - 1) : '#'}
                   aria-disabled={page <= 1}
                   className={`flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-medium transition-colors ${
                     page <= 1
@@ -172,7 +184,7 @@ export default async function ExpensesPage({
                 </span>
 
                 <Link
-                  href={page < totalPages ? `/expenses?page=${page + 1}` : '#'}
+                  href={page < totalPages ? pageHref(page + 1) : '#'}
                   aria-disabled={page >= totalPages}
                   className={`flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-medium transition-colors ${
                     page >= totalPages

@@ -3,8 +3,10 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, TrendingUp } from 'lucide-react'
-import { saveOrder, calcOrder } from './p2p-store'
-import type { P2POperation } from './p2p-store'
+import { toast } from 'sonner'
+import { createP2POrderAction } from '@/lib/actions/p2p'
+import { calcOrder } from './p2p-store'
+import type { P2PFormOperation } from './p2p-store'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
@@ -14,29 +16,20 @@ function fmtUsdt(n: number) {
   return new Intl.NumberFormat('es-VE', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(n)
 }
 
-function parseNum(s: string) {
-  // Accept both comma and dot as decimal separator
-  return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0
-}
-
 function parseRaw(s: string) {
-  // For raw editing: only replace comma→dot, keep dots as-is while typing
   return parseFloat(s.replace(',', '.')) || 0
 }
 
-/** Input with currency prefix label and thousand-separator formatting on blur */
 function CurrencyInput({
   value,
   onChange,
   prefix,
   decimals = 2,
-  placeholder = '0',
 }: {
   value: number
   onChange: (n: number) => void
   prefix: string
   decimals?: number
-  placeholder?: string
 }) {
   const [focused, setFocused] = useState(false)
   const [raw, setRaw] = useState('')
@@ -51,22 +44,16 @@ function CurrencyInput({
 
   return (
     <div className="flex items-center h-10 rounded-xl border border-slate-200 focus-within:ring-2 focus-within:ring-amber-400 overflow-hidden bg-white">
-      <span className="pl-3 pr-1.5 text-xs font-bold text-amber-600 flex-shrink-0 select-none border-r border-slate-100 h-full flex items-center">
+      <span className="pl-3 pr-1.5 text-xs font-bold text-amber-600 flex-shrink-0 border-r border-slate-100 h-full flex items-center">
         {prefix}
       </span>
       <input
         type="text"
         inputMode="decimal"
         value={focused ? raw : formatted}
-        placeholder={focused ? '' : placeholder}
-        onFocus={() => {
-          setRaw(value > 0 ? String(value) : '')
-          setFocused(true)
-        }}
-        onBlur={() => {
-          setFocused(false)
-          onChange(parseRaw(raw))
-        }}
+        placeholder={focused ? '' : '0'}
+        onFocus={() => { setRaw(value > 0 ? String(value) : ''); setFocused(true) }}
+        onBlur={() => { setFocused(false); onChange(parseRaw(raw)) }}
         onChange={(e) => setRaw(e.target.value)}
         className="flex-1 h-full px-2 text-slate-900 text-sm font-medium focus:outline-none bg-transparent min-w-0"
       />
@@ -74,8 +61,12 @@ function CurrencyInput({
   )
 }
 
-function newOp(): P2POperation {
+function newOp(): P2PFormOperation {
   return { id: crypto.randomUUID(), bsSent: 0, usdtReceived: 0 }
+}
+
+function parseNum(s: string) {
+  return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0
 }
 
 export function P2POrderForm() {
@@ -83,40 +74,39 @@ export function P2POrderForm() {
   const [baseAmount, setBaseAmount] = useState('')
   const [sellRate, setSellRate] = useState('')
   const [commissionPct, setCommissionPct] = useState('0.3')
-  const [operations, setOperations] = useState<P2POperation[]>([newOp()])
+  const [operations, setOperations] = useState<P2PFormOperation[]>([newOp()])
+  const [saving, setSaving] = useState(false)
 
   const base = parseNum(baseAmount)
   const sell = parseNum(sellRate)
   const commPct = parseFloat(commissionPct) || 0
 
-  const calc = calcOrder({
-    baseAmount: base,
-    sellRate: sell,
-    commissionPct: commPct,
-    operations,
-  })
+  const calc = calcOrder({ baseAmount: base, sellRate: sell, commissionPct: commPct, operations })
 
   const updateOp = useCallback((id: string, field: 'bsSent' | 'usdtReceived', val: number) => {
-    setOperations((prev) =>
-      prev.map((op) => (op.id === id ? { ...op, [field]: val } : op))
-    )
+    setOperations((prev) => prev.map((op) => (op.id === id ? { ...op, [field]: val } : op)))
   }, [])
 
   const removeOp = useCallback((id: string) => {
     setOperations((prev) => prev.filter((op) => op.id !== id))
   }, [])
 
-  function handleSave() {
+  async function handleSave() {
     if (base <= 0 || sell <= 0) return
-    saveOrder({
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
+    setSaving(true)
+    const result = await createP2POrderAction({
       baseAmount: base,
       sellRate: sell,
       commissionPct: commPct,
-      operations,
+      operations: operations.map((o) => ({ bsSent: o.bsSent, usdtReceived: o.usdtReceived })),
     })
-    router.push('/p2p')
+    setSaving(false)
+    if (result?.error) {
+      toast.error(result.error)
+    } else {
+      toast.success('Orden guardada')
+      router.push('/p2p')
+    }
   }
 
   const profitPositive = calc.profit >= 0
@@ -165,7 +155,6 @@ export function P2POrderForm() {
           />
         </div>
 
-        {/* Resumen rápido */}
         {base > 0 && sell > 0 && (
           <div className="bg-amber-50 rounded-xl p-3 grid grid-cols-3 gap-3 text-center">
             <div>
@@ -184,7 +173,7 @@ export function P2POrderForm() {
         )}
       </div>
 
-      {/* Tabla de compras en Binance */}
+      {/* Tabla compras */}
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
           <h2 className="text-sm font-semibold text-slate-600">Compras en Binance</h2>
@@ -197,7 +186,6 @@ export function P2POrderForm() {
           </button>
         </div>
 
-        {/* Column headers */}
         <div className="grid grid-cols-[1fr_1fr_auto] gap-2 px-4 py-2 bg-slate-50 text-xs text-slate-400 font-medium">
           <span>Bs enviados</span>
           <span>USDT recibidos</span>
@@ -206,18 +194,8 @@ export function P2POrderForm() {
 
         {operations.map((op) => (
           <div key={op.id} className="grid grid-cols-[1fr_1fr_auto] gap-2 px-4 py-2.5 items-center border-b last:border-0">
-            <CurrencyInput
-              value={op.bsSent}
-              onChange={(n) => updateOp(op.id, 'bsSent', n)}
-              prefix="Bs"
-              decimals={2}
-            />
-            <CurrencyInput
-              value={op.usdtReceived}
-              onChange={(n) => updateOp(op.id, 'usdtReceived', n)}
-              prefix="USDT"
-              decimals={4}
-            />
+            <CurrencyInput value={op.bsSent} onChange={(n) => updateOp(op.id, 'bsSent', n)} prefix="Bs" decimals={2} />
+            <CurrencyInput value={op.usdtReceived} onChange={(n) => updateOp(op.id, 'usdtReceived', n)} prefix="USDT" decimals={4} />
             <button
               onClick={() => removeOp(op.id)}
               disabled={operations.length === 1}
@@ -228,7 +206,6 @@ export function P2POrderForm() {
           </div>
         ))}
 
-        {/* Totales tabla */}
         <div className="grid grid-cols-2 gap-3 px-4 py-3 bg-slate-50 border-t border-slate-100">
           <div>
             <p className="text-xs text-slate-400">Total Bs enviados</p>
@@ -241,7 +218,7 @@ export function P2POrderForm() {
         </div>
       </div>
 
-      {/* Resultado final */}
+      {/* Resultado */}
       {base > 0 && sell > 0 && (
         <div className={`rounded-2xl p-5 ${profitPositive ? 'bg-emerald-600' : 'bg-rose-500'} text-white`}>
           <div className="flex items-center gap-2 mb-1">
@@ -252,11 +229,8 @@ export function P2POrderForm() {
             {profitPositive ? '+' : ''}Bs {fmt(calc.profit)}
           </p>
           {sell > 0 && calc.profit !== 0 && (
-            <p className="text-sm opacity-75 mt-1">
-              ≈ {fmtUsdt(Math.abs(calc.profit) / sell)} USDT
-            </p>
+            <p className="text-sm opacity-75 mt-1">≈ {fmtUsdt(Math.abs(calc.profit) / sell)} USDT</p>
           )}
-
           <div className="mt-4 pt-4 border-t border-white/20 grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="opacity-70 text-xs">Bs recibidos</p>
@@ -278,13 +252,12 @@ export function P2POrderForm() {
         </div>
       )}
 
-      {/* Guardar */}
       <button
         onClick={handleSave}
-        disabled={base <= 0 || sell <= 0}
+        disabled={base <= 0 || sell <= 0 || saving}
         className="w-full h-12 rounded-2xl bg-amber-500 text-white font-bold text-sm active:scale-95 transition-transform disabled:opacity-40 disabled:pointer-events-none shadow-sm shadow-amber-500/30"
       >
-        Guardar orden
+        {saving ? 'Guardando...' : 'Guardar orden'}
       </button>
     </div>
   )

@@ -1,30 +1,21 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Trash2, TrendingUp, Plus, TrendingDown } from 'lucide-react'
-import { getOrders, deleteOrder, calcOrder } from './p2p-store'
-import type { P2POrder } from './p2p-store'
+import Link from 'next/link'
+import { Plus, TrendingUp, TrendingDown } from 'lucide-react'
+import { P2PDeleteButton } from './p2p-delete-button'
+import { calcOrderDB } from './p2p-store'
+import type { P2POrderDB } from '@/types'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 }
 
-export function P2POrdersList() {
-  const [orders, setOrders] = useState<P2POrder[]>([])
+function fmtUsdt(n: number) {
+  return new Intl.NumberFormat('es-VE', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(n)
+}
 
-  useEffect(() => {
-    setOrders(getOrders())
-  }, [])
-
-  function handleDelete(id: string) {
-    deleteOrder(id)
-    setOrders(getOrders())
-  }
-
-  const totalProfit = orders.reduce((s, o) => s + calcOrder(o).profit, 0)
+export function P2POrdersList({ orders }: { orders: P2POrderDB[] }) {
+  const totalProfit = orders.reduce((s, o) => s + calcOrderDB(o).profit, 0)
 
   if (orders.length === 0) {
     return (
@@ -32,7 +23,7 @@ export function P2POrdersList() {
         <div className="bg-amber-50 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
           <TrendingUp className="h-8 w-8 text-amber-400" />
         </div>
-        <p className="text-slate-600 font-semibold">Sin órdenes aún</p>
+        <p className="text-slate-600 font-semibold">Sin órdenes en este rango</p>
         <p className="text-slate-400 text-sm mt-1">Registra tu primera operación P2P</p>
         <Link
           href="/p2p/new"
@@ -49,13 +40,13 @@ export function P2POrdersList() {
     <div className="space-y-5">
       {/* Stats resumen */}
       <div className="bg-amber-500 rounded-2xl p-5 text-white">
-        <p className="text-amber-100 text-sm font-medium">Ganancia acumulada</p>
+        <p className="text-amber-100 text-sm font-medium">Ganancia en el período</p>
         <p className="text-4xl font-bold mt-1 tabular-nums">
           {totalProfit >= 0 ? '' : '-'}Bs {fmt(Math.abs(totalProfit))}
         </p>
         <div className="mt-4 pt-4 border-t border-amber-400 grid grid-cols-2 gap-4">
           <div>
-            <p className="text-amber-100 text-xs">Total órdenes</p>
+            <p className="text-amber-100 text-xs">Órdenes</p>
             <p className="text-white font-bold text-lg">{orders.length}</p>
           </div>
           <div>
@@ -72,7 +63,7 @@ export function P2POrdersList() {
         <h2 className="text-sm font-semibold text-slate-600 mb-3">Historial</h2>
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           {orders.map((order) => {
-            const c = calcOrder(order)
+            const c = calcOrderDB(order)
             const positive = c.profit >= 0
             return (
               <div key={order.id} className="flex items-center gap-3 px-4 py-3.5 border-b last:border-0">
@@ -85,24 +76,20 @@ export function P2POrdersList() {
 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-800">
-                    Bs {fmt(order.baseAmount)} · Tasa {order.sellRate}
+                    Bs {fmt(Number(order.base_amount))} · Tasa {order.sell_rate}
                   </p>
                   <p className="text-xs text-slate-400">
-                    {format(new Date(order.createdAt), "dd MMM · HH:mm", { locale: es })}
-                    {' · '}{order.operations.length} op{order.operations.length !== 1 ? 's' : ''}
+                    {format(new Date(order.created_at), 'dd MMM yy · HH:mm', { locale: es })}
+                    {' · '}{order.p2p_operations?.length ?? 0} op{(order.p2p_operations?.length ?? 0) !== 1 ? 's' : ''}
+                    {' · '}{fmtUsdt(c.totalUsdtBought)} USDT
                   </p>
                 </div>
 
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-0 flex-shrink-0">
                   <p className={`text-base font-bold ${positive ? 'text-emerald-600' : 'text-rose-500'}`}>
                     {positive ? '+' : ''}Bs {fmt(c.profit)}
                   </p>
-                  <button
-                    onClick={() => handleDelete(order.id)}
-                    className="ml-1 w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <P2PDeleteButton id={order.id} />
                 </div>
               </div>
             )

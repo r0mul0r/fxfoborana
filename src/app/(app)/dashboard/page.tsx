@@ -2,11 +2,17 @@ import { createClient } from '@/lib/supabase/server'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { PendingDeliveries } from '@/components/dashboard/pending-deliveries'
+import { DateRangeFilter } from '@/components/ui/date-range-filter'
 import { startOfDay, startOfWeek, startOfMonth, format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import type { Transaction, Payment } from '@/types'
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>
+}) {
+  const { from: dateFrom, to: dateTo } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -15,11 +21,16 @@ export default async function DashboardPage() {
   const weekStart  = startOfWeek(now, { weekStartsOn: 1 }).toISOString()
   const monthStart = startOfMonth(now).toISOString()
 
-  const { data: transactions } = await supabase
+  let txQuery = supabase
     .from('transactions')
     .select('*, clients(name)')
     .eq('user_id', user!.id)
     .order('created_at', { ascending: false })
+
+  if (dateFrom) txQuery = txQuery.gte('created_at', `${dateFrom}T00:00:00`)
+  if (dateTo)   txQuery = txQuery.lte('created_at', `${dateTo}T23:59:59`)
+
+  const { data: transactions } = await txQuery
 
   const all: Transaction[] = transactions ?? []
   const dayTx   = all.filter(t => t.created_at >= dayStart)
@@ -66,6 +77,7 @@ export default async function DashboardPage() {
         <p className="text-sm text-slate-400">Resumen de operaciones</p>
       </div>
 
+      <DateRangeFilter from={dateFrom} to={dateTo} />
       <StatsCards stats={stats} />
       <PendingDeliveries transactions={pending} paidMap={paidMap} />
       <RecentTransactions transactions={all.slice(0, 8)} />

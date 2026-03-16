@@ -1,25 +1,36 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Plus, ArrowLeftRight, ChevronRight } from 'lucide-react'
+import { Plus, ArrowLeftRight } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { TransactionRowActions } from '@/components/transactions/transaction-row-actions'
+import { DateRangeFilter } from '@/components/ui/date-range-filter'
 import type { Transaction } from '@/types'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2 }).format(n)
 }
 
-export default async function TransactionsPage() {
+export default async function TransactionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>
+}) {
+  const { from, to } = await searchParams
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: transactions } = await supabase
+  let query = supabase
     .from('transactions')
     .select('*, clients(name)')
     .eq('user_id', user!.id)
     .order('created_at', { ascending: false })
 
+  if (from) query = query.gte('created_at', `${from}T00:00:00`)
+  if (to)   query = query.lte('created_at', `${to}T23:59:59`)
+
+  const { data: transactions } = await query
   const all: Transaction[] = transactions ?? []
 
   return (
@@ -38,12 +49,14 @@ export default async function TransactionsPage() {
         </Link>
       </div>
 
+      <DateRangeFilter from={from} to={to} />
+
       {all.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm py-16 text-center">
           <div className="bg-slate-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
             <ArrowLeftRight className="h-8 w-8 text-slate-400" />
           </div>
-          <p className="text-slate-600 font-semibold">Sin transacciones aún</p>
+          <p className="text-slate-600 font-semibold">Sin transacciones en este rango</p>
           <p className="text-slate-400 text-sm mt-1">Registra tu primera compra de divisas</p>
           <Link
             href="/transactions/new"
