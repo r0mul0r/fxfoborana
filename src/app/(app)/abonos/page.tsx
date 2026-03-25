@@ -48,7 +48,7 @@ export default async function AbonosPage({
   query = query.range(offset, offset + PAGE_SIZE - 1)
 
   const { data, count } = await query
-  const payments = (data ?? []) as PaymentRow[]
+  const payments = (data ?? []) as unknown as PaymentRow[]
   const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE)
 
   // Total amount in period (separate query without pagination)
