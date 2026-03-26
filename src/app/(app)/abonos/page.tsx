@@ -189,9 +189,9 @@ export default async function AbonosPage({
                     >
                       <td className="pl-4 py-3">
                         {e.tipo === 'entrega' ? (
-                          <CheckCircle2 className="h-4 w-4 text-emerald-500" title="Pago completo" />
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                         ) : (
-                          <CircleDot className="h-4 w-4 text-amber-400" title="Abono parcial" />
+                          <CircleDot className="h-4 w-4 text-amber-400" />
                         )}
                       </td>
                       <td className="px-4 py-3 font-medium text-slate-800">{e.cliente}</td>
